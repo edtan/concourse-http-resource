@@ -58,6 +58,6 @@ plan:
 
 ### Parameters
 
-* `data_file`: *Optional. File containing data to be sent with the request.  Cannot be specified at the same time as `data_text`.
+* `data_file`: *Optional.* File containing data to be sent with the request.  Cannot be specified at the same time as `data_text`.
 
-* `data_text`: *Optional. Text to be sent with the request.  Cannot be specified at the same time as `data_file`.
+* `data_text`: *Optional.* Text to be sent with the request.  Cannot be specified at the same time as `data_file`.
