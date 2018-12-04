@@ -26,7 +26,7 @@ fi
 
 url=$(jq -r '.source.url' < $payload)
 method=$(jq -r '.source.method // "GET"' < $payload)
-headers=$(jq -r '.source.headers[] // {}' < $payload)
+headers=$(jq -r '.source.headers // {}' < $payload)
 
 data_file=$(jq -r '.params.data_file // ""' < $payload)
 data_text=$(jq -r '.params.data_text // ""' < $payload)
@@ -45,6 +45,17 @@ replace_build_args() {
   echo "$str"
 }
 
+expanded_headers=()
+header_keys=($(echo "$headers" | jq -r 'keys | join(" ")'))
+if [ "${#header_keys[@]}" -gt 0 ]; then
+  for key in "${header_keys[@]}"; do
+    value=$(echo "$headers" | jq -r --arg "k" "$key" '.[$k]')
+    value=$(replace_build_args "$value")
+    expanded_headers+=("--header")
+    expanded_headers+=("${key}: ${value}")
+  done
+fi
+
 expanded_data=()
 if [ ! -z "$data_file" ]; then
   expanded_data+=("--data-binary")
@@ -56,17 +67,6 @@ if [ ! -z "$data_text" ]; then
   expanded_data+="--data"
   data_text=$(replace_build_args "$data_text")
   expanded_data+=("$data_text")
-fi
-
-expanded_headers=()
-header_keys=($(echo "$headers" | jq -r 'keys | join(" ")'))
-if [ "${#header_keys[@]}" -gt 0 ]; then
-  for key in "${header_keys[@]}"; do
-    value=$(echo "$headers" | jq -r --arg "k" "$key" '.[$k]')
-    value=$(replace_build_args "$value")
-    expanded_headers+=("--header")
-    expanded_headers+=("${key}=${value}")
-  done
 fi
 
 curl -X "$method" "${expanded_headers[@]}" "${expanded_data[@]}" "$url"
