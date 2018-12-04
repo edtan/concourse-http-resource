@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+set -e
+
+exec 3>&1 # make stdout available as fd 3 for the result
+
+source=$1
+
+if [ -z "$source" ]; then
+  echo "usage: $0 <path/to/source>"
+  exit 1
+fi
+
+payload=$(mktemp /tmp/resource-out.XXXXXX)
+cat > $payload <&0
+
+cd $source
+
+debug=$(jq -r '.source.debug' < $payload)
+if [ "$debug" = "true" ]; then
+  # redirect all output to stderr for logging only if debug is 
+  # set to true, in case there are secrets that are part of 
+  # the http request
+  exec 1>&2
+fi
+
+url=$(jq -r '.source.url' < $payload)
+method=$(jq -r '.source.method // "GET"' < $payload)
+headers=$(jq -r '.source.headers[] // {}' < $payload)
+
+data_file=$(jq -r '.params.data_file // ""' < $payload)
+data_text=$(jq -r '.params.data_text // ""' < $payload)
+
+if [ ! -z "$data_file" ] && [ ! -z "$data_text" ]; then
+  echo "Only one of data_file or data_text can be set" >&2
+  exit 2
+fi
+
+replace_build_args() {
+  local str=$1
+  for var in BUILD_ID BUILD_NAME BUILD_JOB_NAME BUILD_PIPELINE_NAME BUILD_TEAM_NAME ATC_EXTERNAL_URL; do
+    str="${str//\$$var/${!var:-}}"
+    str="${str//\$\{$var\}/${!var:-}}"
+  done
+  echo "$str"
+}
+
+expanded_data=()
+if [ ! -z "$data_file" ]; then
+  expanded_data+=("--data-binary")
+  tmp="$(cat "$data_file")"
+  echo "$(replace_build_args "$tmp")" > "$data_file"
+  expanded_data+=("@$data_file")
+fi
+if [ ! -z "$data_text" ]; then
+  expanded_data+="--data"
+  data_text=$(replace_build_args "$data_text")
+  expanded_data+=("$data_text")
+fi
+
+expanded_headers=()
+header_keys=($(echo "$headers" | jq -r 'keys | join(" ")'))
+if [ "${#header_keys[@]}" -gt 0 ]; then
+  for key in "${header_keys[@]}"; do
+    value=$(echo "$headers" | jq -r --arg "k" "$key" '.[$k]')
+    value=$(replace_build_args "$value")
+    expanded_headers+=("--header")
+    expanded_headers+=("${key}=${value}")
+  done
+fi
+
+curl -X "$method" "${expanded_headers[@]}" "${expanded_data[@]}" "$url"
+
+echo "{\"version\": {\"time\": \"$(date +%s)\"}}" >&3
