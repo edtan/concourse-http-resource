@@ -3,6 +3,7 @@
 set -e
 
 exec 3>&1 # make stdout available as fd 3 for the result
+exec 1>&2 # redirect all output to stderr for logging
 
 source=$1
 
@@ -15,14 +16,6 @@ payload=$(mktemp /tmp/resource-out.XXXXXX)
 cat > $payload <&0
 
 cd $source
-
-debug=$(jq -r '.source.debug' < $payload)
-if [ "$debug" = "true" ]; then
-  # redirect all output to stderr for logging only if debug is 
-  # set to true, in case there are secrets that are part of 
-  # the http request
-  exec 1>&2
-fi
 
 url=$(jq -r '.source.url' < $payload)
 method=$(jq -r '.source.method // "GET"' < $payload)

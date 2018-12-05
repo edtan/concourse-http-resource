@@ -23,10 +23,10 @@ resources:
 - name: my-http-resource
   type: concourse-http-resource
   source:
-    url: http://test-url/api/test-endpoint
+    url: https://mattermost.com/hooks/randomhash
     method: "POST"
     headers:
-      X-My-Header: "my-header-value"
+      Content-Type: "application/json"
 ```
 
 * `url`: *Required.* HTTP URL to access.
