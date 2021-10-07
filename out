@@ -20,6 +20,7 @@ cd $source
 url=$(jq -r '.source.url' < $payload)
 method=$(jq -r '.source.method // "GET"' < $payload)
 headers=$(jq -r '.source.headers // {}' < $payload)
+insecure=$(jq -r '.source.insecure // false' < $payload)
 
 data_file=$(jq -r '.params.data_file // ""' < $payload)
 data_text=$(jq -r '.params.data_text // ""' < $payload)
@@ -62,6 +63,11 @@ if [ ! -z "$data_text" ]; then
   expanded_data+=("$data_text")
 fi
 
-curl -X "$method" "${expanded_headers[@]}" "${expanded_data[@]}" "$url"
+expanded_options=()
+if [ "$insecure" = true ]; then
+  expanded_options+=("--insecure")
+fi
+
+curl -X "$method" "${expanded_headers[@]}" "${expanded_data[@]}" "${expanded_options[@]}" "$url"
 
 echo "{\"version\": {\"time\": \"$(date +%s)\"}}" >&3
