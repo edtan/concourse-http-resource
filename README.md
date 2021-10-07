@@ -31,6 +31,8 @@ resources:
 
 * `url`: *Required.* HTTP URL to access.
 
+* `insecure`: *Optional.* Set to `true` to ignore SSL errors.  Defaults to `false`.
+
 * `method`: *Optional.* HTTP method to use.  Defaults to GET.
 
 * `headers`: *Optional.* Map of HTTP headers to send
