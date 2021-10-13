@@ -1,0 +1,23 @@
+name: Build/Publish master branch
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    name: Update image on dockerhub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: build latest
+        run: docker build . -t edtan1/concourse-http-resource:latest
+      - name: login to docker hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      - name: push 'latest' to docker hub
+        run: docker push edtan1/concourse-http-resource:latest
